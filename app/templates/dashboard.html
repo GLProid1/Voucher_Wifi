@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Akses WiFi</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+      <link rel="stylesheet" href="{{ url_for('static', filename='/css/dashboard.css') }}">
+  </head>
+  <body>
+    <div class="loading-indicator" id="loadingIndicator">
+      <div class="loading-content">
+        <div class="large-spinner"></div>
+        <div>Memuat data...</div>
+      </div>
+    </div>
+
+    <div class="modal" id="infoModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Detail Informasi</div>
+          <button class="close-button" onclick="closeInfoModal()">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body" id="infoModalBody">
+          <!-- Informasi akan diisi oleh JavaScript -->
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeInfoModal()">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <header>
+      <div class="container header-content">
+        <h1>Dashboard Akses WiFi</h1>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="loadData(true)">
+            <i class="fas fa-sync-alt" id="refreshIcon"></i>
+            Refresh Data
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="dashboard-layout">
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <i class="fas fa-wifi"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-title">Total Akses</div>
+              <div class="stat-value" id="total-access">0</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-title">Akses Hari Ini</div>
+              <div class="stat-value" id="today-access">0</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-title">Akurasi Terbaik</div>
+              <div class="stat-value" id="best-accuracy">0 m</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-title">Akurasi Rata-rata</div>
+              <div class="stat-value" id="avg-accuracy">0 m</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-container">
+          <div class="map-header">Peta Lokasi</div>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="data-table-container">
+        <div class="table-header">
+          <div>Riwayat Akses</div>
+        </div>
+        <div class="table-responsive">
+          <div id="noData">
+            <i
+              class="fas fa-database"
+              style="font-size: 32px; margin-bottom: 15px; color: #95a5a6"
+            ></i>
+            <p>Tidak ada data untuk ditampilkan</p>
+          </div>
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Lokasi</th>
+                <th>Akurasi</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="data-table-body">
+              <!-- Data akan diisi oleh JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="footer">© 2023 WiFi Voucher System | Hak Cipta Dilindungi</div>
+    <script src="{{ url_for('static', filename='/js/dashboard.js') }}"></script>
+  </body>
+</html>
