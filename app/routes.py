@@ -200,3 +200,15 @@ def get_package_info():
   }
   service = request.args.get('service', 'basic')
   return jsonify(packages.get(service, packages['basic']))
+
+@bp.route('/unlock-internet', methods=['POST'])
+def unlock_internet():
+  ip = request.remote_addr
+  try:
+    os.system(f"iptables -I FORWARD -s {ip} -j ACCEPT")
+    os.system(f"iptables -t NAT -I POSTROUTING -s {ip} -j MASQUERADE")
+    print(f"[✓] Internet unlocked for {ip}")
+    return jsonify({'status': 'success', 'ip': ip}), 200
+  except Exception as e:
+    print(f"[!] Failed to unlock internet for {ip}: {e}")
+    return jsonify({'status': 'error', 'message': str(e)}), 500

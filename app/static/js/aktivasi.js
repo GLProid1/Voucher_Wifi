@@ -187,6 +187,22 @@ document.getElementById("voucherForm").addEventListener("submit", function (e) {
 
         const serviceId = getUrlParameter("service") || "basic";
         getPackageInfo(serviceId);
+
+        fetch("/unlock-internet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              console.log("Internet unlocked successfully");
+            } else {
+              console.error("Failed to unlock internet:", data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error unlocking internet:", error);
+          });
       } else {
         errorElement.textContent =
           "Kode voucher tidak valid atau sudah digunakan";
@@ -220,7 +236,7 @@ document.getElementById("generateBtn").addEventListener("click", function () {
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
-      
+
       // Jika file tersedia, lakukan download
       startDownload();
     })
@@ -238,21 +254,20 @@ document.getElementById("generateBtn").addEventListener("click", function () {
       a.href = "/download-voucher-app";
       a.download = "VoucherApp.exe";
       a.style.display = "none";
-      
+
       // Tambahkan ke DOM dan trigger download
       document.body.appendChild(a);
       a.click();
-      
+
       // Bersihkan setelah download
       setTimeout(() => {
         if (document.body.contains(a)) {
           document.body.removeChild(a);
         }
       }, 1000);
-      
+
       // Mulai pengecekan instalasi
       startInstallationCheck();
-      
     } catch (error) {
       console.error("Error creating download:", error);
       alert("Gagal memulai download. Silakan coba lagi.");
