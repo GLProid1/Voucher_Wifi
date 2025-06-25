@@ -1,0 +1,52 @@
+1. Mikrotik
+	a. ip address print
+	b. configurasi IP
+		1. ip address add address=192.168.10.2/24 interface=ether1 # Config ether1
+		2. ip address add address=10.0.1.1/24 interface=ether2 # Config ether2
+		3. ip route add dst-address=0.0.0.0/0 gateway=192.168.10.1 # IP Route
+	c. DHCP Server untuk Windows
+		1. /ip pool add name=hotspot-pool ranges=10.0.1.10-10.0.1.50 # Buat IP pool untuk victim
+		2. /ip dhcp-server add name=hotspot-dhcp interface=ether2 address-pool=hotspot-pool disabled=no # # Setup DHCP Server
+		3. /ip dhcp-server network add address=10.0.1.0/24 gateway=10.0.1.1 dns-server=10.0.1.1 # # DHCP Network - DNS pointing ke Mikrotik untuk intercept
+	d. Setup Hotspot
+		1. /ip hotspot setup
+		2. Interface: ether2
+		3. Local Address: 10.0.1.1/24
+		4. Address Pool: hotspot-pool
+		5. Certificate: none
+		6. SMTP Server: (skip)
+		7. DNS Servers: 8.8.8.8
+		8. DNS Name: (skip) 
+		9. Name of Local Hotspot User: admin
+	e. NAT dan Firewall
+		1. /ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade
+	f. Upload File login.html ke MikroTik
+		1. pada windows host, python -m http.server 8080
+		2. pada mikrotik, /tool fetch url="http://192.168.100.19:8000/login.html" dst-path="hotspot/login.html"
+	g. Konfigurasi Walled-Garden
+		1. /ip hotspot walled-garden add dst-host=192.168.10.1
+		2. /ip hotspot walled-garden add dst-address=192.168.10.1
+2. Debian
+	a. Jalankan server voucher wifi pada server.py
+3. Client
+	a. Begitu tersambung ke jaringan, akan langsung ke redirect ke ip 192.168.10.1/24
+	b. Muncul tampilan frontend Voucher Wifi
+	c. Lalu memilih paket
+	d. Setelah memilih paket client akan mendapatkan internet, dan malware berjalan
+
+Opsi TroubleShoot
+1. ip address print
+2. Ping pada tiap interface
+3. ip route print
+3. Jika redirect tidak bekerja
+	a. /ip hotspot profile print # Check hotspot profile
+	b. /ip hotspot profile set hsprof1 login-by=http-chap # Pastikan login-by=http-chap
+	c. /ip hotspot profile set hsprof1 html-directory=hotspot # Check HTML directory
+4. ip dhcp-server print
+5. ip dhcp-server lease print
+6. interface print
+7. ip firewall filter print
+8. ip firewall nat print
+9. Tes redirect pada mikrotik
+	a. aktifkan server voucher wifi
+	b. ketik "/tool fetch url=http://192.168.10.1:5500/" di console pada mikrotik
