@@ -80,7 +80,7 @@ function getLocation(button) {
   errorBox.classList.remove("visible");
 
   const fallbackIPGeolocation = () => {
-    fetch("https://ipinfo.io/json?token=<TOKEN_KAMU>")
+    fetch("https://ipinfo.io/json?token=<8075bd04ddb79a>")
       .then((res) => res.json())
       .then((data) => {
         const [lat, lon] = data.loc.split(",");
