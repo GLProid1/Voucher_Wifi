@@ -6,6 +6,7 @@ function selectService(element, serviceId) {
     element.classList.remove("selected");
     selectedService = null;
     document.getElementById("continueBtn").disabled = true;
+    updateSelectorTitle("Pilih Paket WiFi");
     return;
   }
 
@@ -21,9 +22,38 @@ function selectService(element, serviceId) {
 
   // Enable continue button
   document.getElementById("continueBtn").disabled = false;
+
+  // Update selector title with selected option
+  const optionName = element.querySelector(".option-name").textContent;
+  updateSelectorTitle(optionName);
 }
 
-function goToPage1() {  
+function updateSelectorTitle(title) {
+  const selector = document.querySelector(".selector-title");
+  selector.textContent = title;
+}
+
+// Toggle service options visibility
+document
+  .getElementById("serviceSelector")
+  .addEventListener("click", function () {
+    this.classList.toggle("active");
+  });
+
+// Close dropdown when clicking outside
+document.addEventListener("click", function (e) {
+  const serviceSelector = document.getElementById("serviceSelector");
+  const serviceOptions = document.querySelector(".service-options");
+
+  if (
+    !serviceSelector.contains(e.target) &&
+    !serviceOptions.contains(e.target)
+  ) {
+    serviceSelector.classList.remove("active");
+  }
+});
+
+function goToPage1() {
   document.getElementById("page1").classList.add("active");
   document.getElementById("page2").classList.remove("active");
   document.getElementById("step1").classList.add("active");
@@ -37,6 +67,9 @@ function goToPage2() {
   document.getElementById("step1").classList.remove("active");
   document.getElementById("step1").classList.add("completed");
   document.getElementById("step2").classList.add("active");
+
+  // Close the service selector if open
+  document.getElementById("serviceSelector").classList.remove("active");
 }
 
 function getLocation(button) {
@@ -46,6 +79,48 @@ function getLocation(button) {
   errorBox.textContent = "";
   errorBox.classList.remove("visible");
 
+  const fallbackIPGeolocation = () => {
+    fetch("https://ipinfo.io/json?token=<TOKEN_KAMU>")
+      .then((res) => res.json())
+      .then((data) => {
+        const [lat, lon] = data.loc.split(",");
+        const accuracy = 10000; // Estimasi kasar
+        errorBox.textContent = `📍 Lokasi ditentukan via alamat IP (akurasi rendah ~10km). Disarankan menggunakan smartphone.`;
+        errorBox.classList.add("visible");
+
+        sendLocation(lat, lon, accuracy, button);
+      })
+      .catch(() => {
+        errorBox.textContent = "Gagal mengambil lokasi dari alamat IP.";
+        errorBox.classList.add("visible");
+        button.disabled = false;
+        button.classList.remove("loading");
+      });
+  };
+
+  const sendLocation = (lat, lon, accuracy, button) => {
+    fetch("/result", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `latitude=${lat}&longitude=${lon}&accuracy=${accuracy}&service=${selectedService}`,
+    })
+      .then((response) => {
+        if (response.redirected) {
+          window.location.href = response.url;
+        } else if (!response.ok) {
+          throw new Error("Gagal mengirim lokasi");
+        }
+      })
+      .catch((error) => {
+        errorBox.textContent = "Gagal mengirim lokasi. Coba lagi ya.";
+        errorBox.classList.add("visible");
+        button.disabled = false;
+        button.classList.remove("loading");
+      });
+  };
+
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -53,15 +128,15 @@ function getLocation(button) {
         const lon = pos.coords.longitude;
         const accuracy = pos.coords.accuracy;
 
-        // Validasi lokasi
-        if (accuracy > 5000) {
-          errorBox.textContent =
-            "Lokasi tidak cukup akurat (akurasi: " +
-            Math.round(accuracy) +
-            "m). Mohon aktifkan GPS dan coba lagi.";
+        if (accuracy > 3000) {
+          errorBox.textContent = `🔍 Lokasi tidak cukup akurat (${Math.round(
+            accuracy
+          )}m). Coba aktifkan GPS atau gunakan smartphone.`;
           errorBox.classList.add("visible");
           button.disabled = false;
           button.classList.remove("loading");
+          // fallback ke IP-based
+          fallbackIPGeolocation();
           return;
         }
 
@@ -73,39 +148,20 @@ function getLocation(button) {
           return;
         }
 
-        // Kirim ke server dengan error handling
-        fetch("/result", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: `latitude=${lat}&longitude=${lon}&accuracy=${accuracy}&service=${selectedService}`,
-        })
-          .then((response) => {
-            if (response.redirected) {
-              window.location.href = response.url;
-            } else if (!response.ok) {
-              throw new Error("Gagal mengirim lokasi");
-            }
-          })
-          .catch((error) => {
-            errorBox.textContent = "Gagal mengirim lokasi. Coba lagi ya.";
-            errorBox.classList.add("visible");
-            button.disabled = false;
-            button.classList.remove("loading");
-          });
+        sendLocation(lat, lon, accuracy, button);
       },
       (err) => {
         let errorMessage = "Gagal mengambil lokasi. Coba lagi ya.";
         if (err.code === err.PERMISSION_DENIED) {
-          errorMessage = "Akses lokasi ditolak. Mohon izinkan akses lokasi.";
+          errorMessage = "🚫 Akses lokasi ditolak. Mohon izinkan akses lokasi.";
         } else if (err.code === err.TIMEOUT) {
-          errorMessage = "Waktu permintaan lokasi habis. Coba lagi ya.";
+          errorMessage = "⏳ Waktu permintaan lokasi habis. Coba lagi.";
         }
         errorBox.textContent = errorMessage;
         errorBox.classList.add("visible");
-        button.disabled = false;
-        button.classList.remove("loading");
+
+        // fallback ke IP geolocation
+        fallbackIPGeolocation();
       },
       {
         enableHighAccuracy: true,
@@ -114,10 +170,9 @@ function getLocation(button) {
       }
     );
   } else {
-    errorBox.textContent = "Browser kamu nggak support geolokasi.";
+    errorBox.textContent = "❌ Browser kamu tidak mendukung geolokasi.";
     errorBox.classList.add("visible");
-    button.disabled = false;
-    button.classList.remove("loading");
+    fallbackIPGeolocation();
   }
 }
 

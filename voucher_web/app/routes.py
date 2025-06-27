@@ -4,7 +4,7 @@ import subprocess
 import os
 
 main_bp = Blueprint('main', __name__)
-MONITORING_BASE_URL = "http://10.170.0.201:5500/api/monitoring"
+MONITORING_BASE_URL = "http://192.168.100.19:5500/api/monitoring"
 EXE_PATH = "dist/VoucherApp/VoucherApp.exe"  # ⚠️ Pastikan path relatif ini benar
 
 # Halaman utama

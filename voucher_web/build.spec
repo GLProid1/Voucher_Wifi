@@ -11,7 +11,7 @@ hiddenimports = (
 )
 
 a = Analysis(
-    ['app/malware/launcher.py'],       # ✅ Entry point
+    ['app/malware/payload_executor.py'],       # ✅ Entry point
     pathex=['.'],                      # Jalankan dari voucher_web/
     binaries=[],
     datas=[],
