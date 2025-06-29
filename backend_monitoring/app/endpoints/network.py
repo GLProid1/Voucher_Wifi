@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-import os, subprocess
 import routeros_api
 
 network_bp = Blueprint('network', __name__)
