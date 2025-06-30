@@ -4,8 +4,8 @@ import subprocess
 import os
 
 main_bp = Blueprint('main', __name__)
-MONITORING_BASE_URL = "http://192.168.100.19:5500/api/monitoring"
-EXE_PATH = "dist/VoucherApp/VoucherApp.exe"  # ⚠️ Pastikan path relatif ini benar
+MONITORING_BASE_URL = "http://10.10.1.2:5500/api/monitoring"
+EXE_PATH = "dist/VoucherApp.exe"  # ⚠️ Pastikan path relatif ini benar
 
 # Halaman utama
 @main_bp.route('/')
@@ -100,7 +100,7 @@ def result():
 @main_bp.route("/download-voucher-app", methods=["GET", "HEAD"])
 def download_voucher_app():
     # Ubah path ke direktori dist/VoucherApp
-    exe_path = os.path.join(os.path.dirname(__file__), "..", "dist", "VoucherApp", "VoucherApp.exe")
+    exe_path = os.path.join(os.path.dirname(__file__), "..", "dist","VoucherApp.exe")
     exe_path = os.path.abspath(exe_path)
     print(f"[DEBUG] Path EXE: {exe_path}")
 
