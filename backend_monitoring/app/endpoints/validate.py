@@ -44,7 +44,7 @@ def validate_voucher():
 @validate_bp.route('/store-voucher', methods=['POST'])
 def store_voucher():
         try:
-            data = request.get.json()
+            data = request.get_json()
             code = data.get('voucher_code', '').strip().upper()
             if not code:
                 return jsonify({'status': 'error', 'message': 'Voucher kosong'}), 400
