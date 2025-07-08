@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Voucher WiFi - Aktivasi</title>
-      <link rel="stylesheet" href="{{ url_for('static', filename='css/aktivasi.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/aktivasi.css') }}"
+    />
   </head>
   <body>
     <div class="card">
@@ -46,6 +49,12 @@
             Masukkan Kode Voucher
           </div>
           <form id="voucherForm" class="voucher-form">
+            <input
+              type="hidden"
+              id="clientMac"
+              name="clientMac"
+              value="{{ mac_address }}"
+            />
             <input
               type="text"
               id="voucherCode"

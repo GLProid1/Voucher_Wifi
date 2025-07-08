@@ -1,0 +1,13 @@
+*.log
+*.json
+*.jsonl
+login.html
+Setup Mikrotik PBL.txt
+.idea/
+.vscode/
+__init__.py
+
+__pycache__/
+env/
+build/
+dist/

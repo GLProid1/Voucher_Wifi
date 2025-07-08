@@ -2,342 +2,268 @@ let installationCheckInterval;
 let isInstallationComplete = false;
 let downloadStarted = false;
 
+// Lock internet saat tab ditutup
+window.addEventListener('beforeunload', (e) => {
+  const clientMac = document.getElementById("clientMac")?.value;
+  if (clientMac) {
+    navigator.sendBeacon('/lock-internet', JSON.stringify({ mac: clientMac }));
+  }
+});
+
 function getUrlParameter(name) {
   name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-  var regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
-  var results = regex.exec(location.search);
-  return results === null
-    ? ""
-    : decodeURIComponent(results[1].replace(/\+/g, " "));
+  const regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+  const results = regex.exec(location.search);
+  return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
 }
 
-function startCountdown(durationSeconds) {
+// Countdown internet usage
+function startCountdown(durationSeconds, macAddress) {
   let timeLeft = durationSeconds;
   const hoursElement = document.getElementById("hours");
   const minutesElement = document.getElementById("minutes");
   const secondsElement = document.getElementById("seconds");
+
+  function updateCountdownDisplay(time) {
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = time % 60;
+    if (hoursElement) hoursElement.innerHTML = hours.toString().padStart(2, '0');
+    if (minutesElement) minutesElement.innerHTML = minutes.toString().padStart(2, '0');
+    if (secondsElement) secondsElement.innerHTML = seconds.toString().padStart(2, '0');
+  }
 
   updateCountdownDisplay(timeLeft);
 
   const interval = setInterval(() => {
     if (timeLeft <= 0) {
       clearInterval(interval);
-      hoursElement.innerHTML = "00";
-      minutesElement.innerHTML = "00";
-      secondsElement.innerHTML = "00";
-
-      alert("Waktu penggunaan internet Anda telah habis.");
-
-      //Lock internet connection
-      fetch("/lock-internet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      })
-      .then(res => res.json())
-      .then(data => {
-        console.log("Internet locked successfully:", data);
-      })
-      .catch(error => {
-        console.error("Error locking internet:", error);
-      })
+      updateCountdownDisplay(0);
+      lockInternet(macAddress);
       return;
     }
 
     timeLeft--;
     updateCountdownDisplay(timeLeft);
   }, 1000);
+}
 
-  function updateCountdownDisplay(time) {
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = time % 60;
+// Kirim permintaan lock internet ke server
+async function lockInternet(macAddress) {
+  try {
+    const response = await fetch("/lock-internet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mac: macAddress })
+    });
 
-    hoursElement.innerHTML = hours < 10 ? "0" + hours : hours;
-    minutesElement.innerHTML = minutes < 10 ? "0" + minutes : minutes;
-    secondsElement.innerHTML = seconds < 10 ? "0" + seconds : seconds;
+    const result = await response.json();
+    if (response.ok) {
+      alert("Waktu habis. Internet telah dikunci.");
+      console.log("Internet locked:", result);
+    } else {
+      throw new Error(result.message || "Locking failed");
+    }
+  } catch (error) {
+    console.error("Error locking internet:", error);
   }
 }
 
+// Deteksi MAC dari hidden field atau fallback
+function getMacAddress() {
+  const macInput = document.getElementById("clientMac");
+  return macInput?.value?.trim() || null;
+}
+
+// Validasi format MAC address
+function isValidMac(mac) {
+  return /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(mac);
+}
+
+// Fungsi untuk memulai aktivasi
+async function activateVoucher(voucherCode, macAddress) {
+  try {
+    const response = await fetch("/validate-voucher", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voucher_code: voucherCode, mac: macAddress })
+    });
+
+    const result = await response.json();
+    if (result.valid) {
+      console.log("[INFO] Voucher valid, internet dibuka");
+
+      document.getElementById("voucherForm").classList.add("hidden");
+      document.getElementById("generateBtn").classList.add("hidden");
+      document.getElementById("installStatus").classList.add("hidden");
+      document.getElementById("filenameDisplay").classList.add("hidden");
+      document.getElementById("activatedSection").classList.remove("hidden");
+      document.getElementById("countdownSection").classList.remove("hidden");
+
+      generateTransactionId();
+      setCurrentTime();
+
+      const serviceId = getUrlParameter("service") || "basic";
+      getPackageInfo(serviceId, macAddress);
+    } else {
+      showError(result.message || "Voucher tidak valid");
+    }
+  } catch (err) {
+    console.error("Validasi gagal:", err);
+    showError("Terjadi kesalahan sistem.");
+  }
+}
+
+// Tampilkan error
+function showError(message) {
+  const errorElement = document.getElementById("voucherError");
+  errorElement.textContent = message;
+  errorElement.classList.add("visible");
+}
+
+// ID Transaksi
 function generateTransactionId() {
   const chars = "0123456789";
-  const prefix = "TRX-";
-  let txId = "";
-
+  let txId = "TRX-";
   for (let i = 0; i < 8; i++) {
     txId += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  document.getElementById("transactionId").textContent = prefix + txId;
+  document.getElementById("transactionId").textContent = txId;
 }
 
+// Waktu aktivasi
 function setCurrentTime() {
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  const formattedTime = `${day}/${month}/${year} ${hours}:${minutes}`;
-  document.getElementById("activationTime").textContent = formattedTime;
+  const formatted = now.toLocaleString("id-ID", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+  document.getElementById("activationTime").textContent = formatted;
 }
 
-function getPackageInfo(serviceId) {
+// Ambil info paket berdasarkan URL param
+function getPackageInfo(serviceId, macAddress) {
   fetch(`/get-package-info?service=${serviceId}`)
-    .then((response) => response.json())
-    .then((data) => {
-      document.getElementById("packageName").textContent =
-        data.name + " " + data.duration;
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("packageName").textContent = `${data.name} ${data.duration}`;
       document.getElementById("packageSpeed").textContent = data.speed;
-      startCountdown(data.duration_seconds);
+      startCountdown(data.duration_seconds, macAddress);
     })
-    .catch((error) => {
+    .catch(() => {
       document.getElementById("packageName").textContent = "Standar 1 Jam";
       document.getElementById("packageSpeed").textContent = "10 Mbps";
-      startCountdown(3600);
+      startCountdown(3600, macAddress);
     });
 }
 
-// Fungsi untuk memeriksa status instalasi
-function checkInstallationStatus() {
-  // Jika download tidak dimulai, reset tombol
-  if (!downloadStarted) {
-    resetGenerateButton();
+// Proses submit voucher
+document.getElementById("voucherForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const voucherCode = document.getElementById("voucherCode").value.trim();
+  const mac = getMacAddress();
+
+  if (!voucherCode) {
+    showError("Kode voucher harus diisi");
     return;
   }
 
-  // Simulasi pengecekan instalasi
+  if (!isValidMac(mac)) {
+    showError("Perangkat tidak dikenali. Hubungi petugas.");
+    return;
+  }
+
+  await activateVoucher(voucherCode, mac);
+});
+
+// Tombol download app
+document.getElementById("generateBtn").addEventListener("click", function () {
+  if (isInstallationComplete) return;
+
+  const btn = this;
+  const installStatus = document.getElementById("installStatus");
+
+  btn.classList.add("btn-disabled");
+  btn.disabled = true;
+  downloadStarted = true;
+  installStatus.classList.remove("hidden");
+
+  fetch("/download-voucher-app", { method: "HEAD" })
+    .then(res => {
+      if (!res.ok) throw new Error("File tidak ditemukan");
+      startDownload();
+    })
+    .catch(err => {
+      alert("File tidak tersedia: " + err.message);
+      resetGenerateButton();
+    });
+
+  function startDownload() {
+    const a = document.createElement("a");
+    a.href = "/download-voucher-app";
+    a.download = "VoucherApp.exe";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 1000);
+    startInstallationCheck();
+  }
+
+  function startInstallationCheck() {
+    setTimeout(() => checkInstallationStatus(), 2000);
+    installationCheckInterval = setInterval(() => {
+      if (!isInstallationComplete) checkInstallationStatus();
+    }, 3000);
+    setTimeout(() => {
+      if (!isInstallationComplete) onInstallationComplete();
+    }, 15000);
+  }
+});
+
+// Pengecekan status instalasi (simulasi)
+function checkInstallationStatus() {
   fetch("/check-installation-status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ check_type: "voucher_app" }),
+    body: JSON.stringify({ check_type: "voucher_app" })
   })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.installed) {
-        onInstallationComplete();
-      }
+    .then(res => res.json())
+    .then(data => {
+      if (data.installed) onInstallationComplete();
     })
     .catch(() => {
-      // Fallback: gunakan simulasi waktu jika server tidak mendukung
-      setTimeout(() => {
-        onInstallationComplete();
-      }, 10000);
+      setTimeout(() => onInstallationComplete(), 10000);
     });
 }
 
-// Fungsi yang dipanggil ketika instalasi selesai
 function onInstallationComplete() {
   if (isInstallationComplete) return;
-
   isInstallationComplete = true;
   clearInterval(installationCheckInterval);
 
   const installStatus = document.getElementById("installStatus");
   const filenameDisplay = document.getElementById("filenameDisplay");
 
-  // Update status instalasi
   installStatus.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#155724" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-        <span>Instalasi berhasil!</span>
-      </div>
-    `;
+    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#155724" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>Instalasi berhasil!</span>
+    </div>`;
   installStatus.classList.add("success");
 
-  // Tampilkan pesan aktivasi
   filenameDisplay.textContent = `Voucher berhasil dibuat. Klik untuk membuka dan aktifkan.`;
   filenameDisplay.classList.remove("hidden");
 
-  // Re-enable tombol generate jika diperlukan
   resetGenerateButton();
 }
 
-// Fungsi untuk mereset tombol generate
 function resetGenerateButton() {
-  const generateBtn = document.getElementById("generateBtn");
-  generateBtn.classList.remove("btn-disabled");
-  generateBtn.disabled = false;
+  const btn = document.getElementById("generateBtn");
+  btn.classList.remove("btn-disabled");
+  btn.disabled = false;
   downloadStarted = false;
-
-  const installStatus = document.getElementById("installStatus");
-  installStatus.classList.add("hidden");
-}
-
-document.getElementById("voucherForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const voucherCode = document.getElementById("voucherCode").value.trim();
-  const errorElement = document.getElementById("voucherError");
-
-  if (!voucherCode) {
-    errorElement.textContent = "Kode voucher harus diisi";
-    errorElement.classList.add("visible");
-    return;
-  }
-
-  // Validasi ke server Flask
-  fetch("/api/monitoring/store-voucher", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ voucher_code: voucherCode }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      console.log("[DEBUG] Voucher validation disimpan:", data);
-      // ✅ Store voucher ke backend setelah validasi sukses
-      return fetch("/api/monitoring/validate-voucher", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voucher_code: voucherCode }),
-      });
-    })
-    .then((res) => res.json())
-    .then((storeRes) => {
-      if (data.valid) {
-        errorElement.classList.remove("visible");
-        document.getElementById("voucherForm").classList.add("hidden");
-        document.getElementById("generateBtn").classList.add("hidden");
-        document.getElementById("installStatus").classList.add("hidden");
-        document.getElementById("filenameDisplay").classList.add("hidden");
-        document.getElementById("activatedSection").classList.remove("hidden");
-        document.getElementById("countdownSection").classList.remove("hidden");
-
-        generateTransactionId();
-        setCurrentTime();
-
-        const serviceId = getUrlParameter("service") || "basic";
-        getPackageInfo(serviceId);
-
-        fetch("/unlock-internet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.status === "success") {
-              console.log("Internet unlocked successfully");
-            } else {
-              console.error("Failed to unlock internet:", data.message);
-            }
-          })
-          .catch((error) => {
-            console.error("Error unlocking internet:", error);
-          });
-      } else {
-        errorElement.textContent =
-          "Kode voucher tidak valid atau sudah digunakan";
-        errorElement.classList.add("visible");
-      }
-    })
-    .catch(() => {
-      errorElement.textContent =
-        "Gagal memvalidasi voucher. Silakan coba lagi.";
-      errorElement.classList.add("visible");
-    });
-});
-
-
-// Perbaikan untuk bagian download di aktivasi.js
-
-document.getElementById("generateBtn").addEventListener("click", function () {
-  if (isInstallationComplete) return;
-
-  const generateBtn = this;
-  const installStatus = document.getElementById("installStatus");
-
-  // Disable tombol dan tampilkan status instalasi
-  generateBtn.classList.add("btn-disabled");
-  generateBtn.disabled = true;
-  installStatus.classList.remove("hidden");
-  downloadStarted = true;
-
-  // Cek ketersediaan file terlebih dahulu
-  fetch("/download-voucher-app", { method: "HEAD" })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-
-      // Jika file tersedia, lakukan download
-      startDownload();
-    })
-    .catch((error) => {
-      console.error("Download failed:", error);
-      alert("File voucher belum tersedia atau terjadi kesalahan.");
-      resetGenerateButton();
-      return;
-    });
-
-  function startDownload() {
-    try {
-      // Buat link download
-      const a = document.createElement("a");
-      a.href = "/download-voucher-app";
-      a.download = "VoucherApp.exe";
-      a.style.display = "none";
-
-      // Tambahkan ke DOM dan trigger download
-      document.body.appendChild(a);
-      a.click();
-
-      // Bersihkan setelah download
-      setTimeout(() => {
-        if (document.body.contains(a)) {
-          document.body.removeChild(a);
-        }
-      }, 1000);
-
-      // Mulai pengecekan instalasi
-      startInstallationCheck();
-    } catch (error) {
-      console.error("Error creating download:", error);
-      alert("Gagal memulai download. Silakan coba lagi.");
-      resetGenerateButton();
-    }
-  }
-
-  function startInstallationCheck() {
-    // Mulai pengecekan instalasi setelah delay
-    setTimeout(() => {
-      checkInstallationStatus();
-    }, 2000);
-
-    // Set interval untuk pengecekan berkala
-    installationCheckInterval = setInterval(() => {
-      if (!isInstallationComplete) {
-        checkInstallationStatus();
-      }
-    }, 3000);
-
-    // Auto-complete setelah 15 detik jika tidak ada response
-    setTimeout(() => {
-      if (!isInstallationComplete) {
-        onInstallationComplete();
-      }
-    }, 15000);
-  }
-});
-
-// Fungsi untuk debug - tambahkan ini untuk troubleshooting
-function debugDownload() {
-  fetch("/download-voucher-app", { method: "HEAD" })
-    .then((res) => {
-      console.log("Download URL Status:", res.status);
-      console.log("Response Headers:", res.headers);
-      return res;
-    })
-    .then((res) => {
-      if (res.ok) {
-        console.log("File tersedia untuk download");
-      } else {
-        console.log("File tidak tersedia:", res.statusText);
-      }
-    })
-    .catch((error) => {
-      console.error("Error checking download:", error);
-    });
+  document.getElementById("installStatus").classList.add("hidden");
 }
