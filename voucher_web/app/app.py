@@ -5,6 +5,7 @@ def create_app():
     app.config['SECRET_KEY'] = 'voucher-web-secret-key'
 
     from app.routes import main_bp
+
     app.register_blueprint(main_bp)
 
     return app
