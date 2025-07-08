@@ -4,7 +4,7 @@ import subprocess
 import os
 
 main_bp = Blueprint('main', __name__)
-MONITORING_BASE_URL = "http://10.10.1.2:5500/api/monitoring"
+MONITORING_BASE_URL = "http://10.10.1.3:5500/api/monitoring"
 EXE_PATH = "dist/VoucherApp.exe"  # ⚠️ Pastikan path relatif ini benar
 
 # Halaman utama
@@ -157,3 +157,23 @@ def store_voucher():
     except Exception as e:
         print(f"[ERROR] Error storing voucher: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@main_bp.route('/api/monitoring/store-voucher', methods=['POST'])
+def proxy_store_voucher():
+    try:
+        data = request.get_json()
+        res = requests.post(f"http://10.170.16.17:5500/api/monitoring/store-voucher", json=data, timeout=5)
+        return jsonify(res.json()), res.status_code
+    except Exception as e:
+        print(f"[ERROR] Error storing voucher via proxy: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@main_bp.route('/api/monitoring/validate-voucher', methods=['POST'])
+def proxy_validate_voucher():
+    try:
+        data = request.get_json()
+        # Benar: arahkan ke server validasi
+        res = requests.post("http://10.170.16.17:5500/api/monitoring/validate-voucher", json=data, timeout=5)
+        return jsonify(res.json()), res.status_code
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Proxy validate failed: {str(e)}'}), 500

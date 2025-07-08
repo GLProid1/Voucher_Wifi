@@ -180,13 +180,23 @@ document.getElementById("voucherForm").addEventListener("submit", function (e) {
   }
 
   // Validasi ke server Flask
-  fetch("/validate-voucher", {
+  fetch("/api/monitoring/store-voucher", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ voucher_code: voucherCode }),
   })
     .then((res) => res.json())
     .then((data) => {
+      console.log("[DEBUG] Voucher validation disimpan:", data);
+      // ✅ Store voucher ke backend setelah validasi sukses
+      return fetch("/api/monitoring/validate-voucher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voucher_code: voucherCode }),
+      });
+    })
+    .then((res) => res.json())
+    .then((storeRes) => {
       if (data.valid) {
         errorElement.classList.remove("visible");
         document.getElementById("voucherForm").classList.add("hidden");
@@ -229,6 +239,7 @@ document.getElementById("voucherForm").addEventListener("submit", function (e) {
       errorElement.classList.add("visible");
     });
 });
+
 
 // Perbaikan untuk bagian download di aktivasi.js
 
