@@ -24,16 +24,16 @@ def validate_voucher():
             return jsonify({'valid': False, 'message': 'Voucher file not found'}), 404
 
         with open(voucher_path, 'r') as f:
-            vouchers = [v.strip().upper() for v in f.readlines() if v.strip()]
+            vouchers = [v.strip().replace('\r', '').upper() for v in f if v.strip()]
 
         current_app.logger.info(f"VOUCHERS TERSEDIA: {vouchers}")  # ✅ Log list voucher
-
+        current_app.logger.info(f"Daftar sebelum di hapus {vouchers}")
         if code not in vouchers:
             return jsonify({'valid': False, 'message': 'Voucher code not found'}), 404
 
         vouchers.remove(code)
         with open(voucher_path, 'w') as f:
-            f.writelines(v + '\n' for v in vouchers)
+            f.write('\n'.join(vouchers) + '\n')
 
         return jsonify({'valid': True, 'message': 'Voucher code is valid and has been used'}), 200
 
@@ -44,7 +44,7 @@ def validate_voucher():
 @validate_bp.route('/store-voucher', methods=['POST'])
 def store_voucher():
         try:
-            data = request.get.json()
+            data = request.get_json()
             code = data.get('voucher_code', '').strip().upper()
             if not code:
                 return jsonify({'status': 'error', 'message': 'Voucher kosong'}), 400
