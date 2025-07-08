@@ -1,5 +1,6 @@
 *.log
 *.json
+*.pyc
 *.jsonl
 login.html
 Setup Mikrotik PBL.txt
