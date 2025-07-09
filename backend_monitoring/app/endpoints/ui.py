@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, current_app
 import os, json, re
 
 ui_bp = Blueprint('ui', __name__)
@@ -17,8 +17,10 @@ def index():
 
 @ui_bp.route('/log_monitor')
 def log_monitor():
+    log_dir = current_app.config.get('LOG_DIR', LOG_DIR)
+    log_file = os.path.join(log_dir, 'traffic.json')
     try:
-        with open(LOG_FILE, 'r') as f:
+        with open(log_file, 'r') as f:
             entries = [json.loads(line) for line in f if line.strip()]
     except FileNotFoundError:
         entries = []
@@ -37,8 +39,10 @@ def key_logger():
 
 @ui_bp.route('/activity_monitor')
 def activity_monitor():
+    log_dir = current_app.config.get('LOG_DIR', LOG_DIR)
+    log_file = os.path.join(log_dir, 'traffic.json')
     try:
-        with open(LOG_FILE, 'r') as f:
+        with open(log_file, 'r') as f:
             entries = [json.loads(line) for line in f if line.strip()]
     except FileNotFoundError:
         entries = []

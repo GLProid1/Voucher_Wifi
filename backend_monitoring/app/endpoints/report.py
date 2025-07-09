@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import os, json
 from datetime import datetime
-from ..utils import ensure_log_directory
+from app.utils import ensure_log_directory
 
 report_bp = Blueprint('report', __name__, url_prefix='/api/monitoring')
 

@@ -80,6 +80,7 @@
               <div class="activity-header">User Activity: {{ entry.hostname }}</div>
               <p><strong>IP Address:</strong> {{ entry.ip_address }}</p>
               <p><strong>Operating System:</strong> {{ entry.os }} {{ entry.os_version }}</p>
+              <p><strong>Activity:</strong> {{ entry.activity }}</p>  <!-- ← tambahkan ini -->
 
               {% if entry.browser_history is defined %}
               <h6 class="mt-3">Browser History</h6>

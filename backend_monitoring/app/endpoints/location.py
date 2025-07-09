@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 import os, json
-from ..utils import ensure_log_directory
-from ..extensions import socketio
+from app.utils import ensure_log_directory
+from app.extensions import socketio
 
 location_bp = Blueprint('location', __name__, url_prefix='/api/monitoring')
 

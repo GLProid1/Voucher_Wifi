@@ -1,15 +1,15 @@
 from flask import Flask
-from .extensions import socketio
+from app.extensions import socketio
 
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'secret_key_for_socketio'
 
-    from .endpoints.report import report_bp
-    from .endpoints.location import location_bp
-    from .endpoints.validate import validate_bp
-    from .endpoints.ui import ui_bp
-    from .endpoints.network import network_bp
+    from app.endpoints.report import report_bp
+    from app.endpoints.location import location_bp
+    from app.endpoints.validate import validate_bp
+    from app.endpoints.ui import ui_bp
+    from app.endpoints.network import network_bp
     
 
     app.register_blueprint(ui_bp)

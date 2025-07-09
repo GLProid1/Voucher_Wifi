@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
-from ..utils import ensure_log_directory
+from app.utils import ensure_log_directory
 
 validate_bp = Blueprint('validate', __name__, url_prefix='/api/monitoring')
 
